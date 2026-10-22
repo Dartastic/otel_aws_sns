@@ -1,11 +1,12 @@
-// Licensed under the Dartastic Pro Software License Agreement.
+// Licensed under the Apache License, Version 2.0
 // Copyright 2025-2026 Mindful Software LLC d/b/a Dartastic.io, All rights reserved.
 
-import 'package:dartastic_opentelemetry/dartastic_opentelemetry.dart';
+import 'package:dartastic_opentelemetry_api/dartastic_opentelemetry_api.dart';
 
 import 'otel_aws_sns_suppression.dart';
 
 class AwsSNSResult {
+  /// Creates a result.
   const AwsSNSResult({
     this.topicArn,
     this.topicName,
@@ -31,8 +32,13 @@ class AwsSNSResult {
   final String? errorMessage;
 }
 
+/// What a traced call returned: the value for the caller plus fields
+/// recorded on the span.
 class AwsSNSCallResult<T> {
+  /// Creates a call result.
   const AwsSNSCallResult({required this.value, this.result});
+
+  /// The value returned to the caller.
   final T value;
   final AwsSNSResult? result;
 }
@@ -40,67 +46,68 @@ class AwsSNSCallResult<T> {
 Future<T> tracedAwsSNS<T>({
   required String operation,
   required Future<AwsSNSCallResult<T>> Function() invoke,
-  Tracer? tracer,
+  APITracer? tracer,
 }) async {
   if (awsSNSInstrumentationSuppressed()) {
     final r = await invoke();
     return r.value;
   }
-  final t = tracer ?? OTel.tracerProvider().getTracer('otel_aws_sns');
+  final t = tracer ?? OTelAPI.tracerProvider().getTracer('otel_aws_sns');
   final span = t.startSpan('sns $operation', kind: SpanKind.producer);
   try {
-    span.addAttributes(
-        OTel.attributes([OTel.attributeString('messaging.system', 'aws_sns')]));
+    span.addAttributes(OTelAPI.attributes(
+        [OTelAPI.attributeString('messaging.system', 'aws_sns')]));
     final r = await invoke();
     final res = r.result;
     if (res != null) {
       if (res.topicArn != null) {
-        span.addAttributes(OTel.attributes([
-          OTel.attributeString('messaging.destination.name', res.topicArn!)
+        span.addAttributes(OTelAPI.attributes([
+          OTelAPI.attributeString('messaging.destination.name', res.topicArn!)
         ]));
       }
       if (res.topicName != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('aws.sns.topic_name', res.topicName!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('aws.sns.topic_name', res.topicName!)]));
       }
       if (res.messageId != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('messaging.message.id', res.messageId!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('messaging.message.id', res.messageId!)]));
       }
       if (res.subject != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('aws.sns.subject', res.subject!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('aws.sns.subject', res.subject!)]));
       }
       if (res.subscriptionsConfirmed != null) {
-        span.addAttributes(OTel.attributes([
-          OTel.attributeInt(
+        span.addAttributes(OTelAPI.attributes([
+          OTelAPI.attributeInt(
             'aws.sns.subscriptions_confirmed',
             res.subscriptionsConfirmed!,
           )
         ]));
       }
       if (res.fifo != null) {
-        span.addAttributes(
-            OTel.attributes([OTel.attributeBool('aws.sns.fifo', res.fifo!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeBool('aws.sns.fifo', res.fifo!)]));
       }
       if (res.region != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('cloud.region', res.region!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('cloud.region', res.region!)]));
       }
       if (res.statusCode != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeInt('http.response.status_code', res.statusCode!)]));
+        span.addAttributes(OTelAPI.attributes([
+          OTelAPI.attributeInt('http.response.status_code', res.statusCode!)
+        ]));
       }
       if (res.errorCode != null) {
-        span.addAttributes(OTel.attributes(
-            [OTel.attributeString('sns.error.code', res.errorCode!)]));
+        span.addAttributes(OTelAPI.attributes(
+            [OTelAPI.attributeString('sns.error.code', res.errorCode!)]));
       }
       final fail = res.errorCode != null ||
           (res.statusCode != null && res.statusCode! >= 400);
       if (fail) {
-        span.addAttributes(OTel.attributes([
-          OTel.attributeString(
-            ErrorResource.errorType.key,
+        span.addAttributes(OTelAPI.attributes([
+          OTelAPI.attributeString(
+            ErrorAttributes.errorType.key,
             res.errorCode ?? 'sns.error',
           )
         ]));
