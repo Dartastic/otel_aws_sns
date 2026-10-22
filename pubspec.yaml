@@ -2,7 +2,7 @@ name: otel_aws_sns
 description: >-
   OpenTelemetry instrumentation for aws_sns by Dartastic.io. Adds standard
   OpenTelemetry observability to applications that use aws_sns.
-version: 0.1.0
+version: 0.1.1-wip
 repository: https://github.com/dartastic/otel_aws_sns
 homepage: https://dartastic.io
 
